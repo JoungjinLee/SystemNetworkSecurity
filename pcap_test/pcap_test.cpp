@@ -68,24 +68,52 @@ int main(int argc, char *argv[]) {
 
 	printf("----------------------------------\n");
 
-	readMAC("Destination MAC\t");
-	readMAC("Source MAC\t");
+	readMAC("\x1b[32mDestination MAC\x1b[0m\t");
+	readMAC("\x1b[32mSource MAC\x1b[0m\t");
 
 	uint16_t b; next((uint8_t *)&b, sizeof(b)); b = ntohs(b);
 
 	if (b != 0x0800) continue;
 
-	skip(12);
+	uint8_t ipsz; next(&ipsz, sizeof(ipsz)); ipsz &= 0xf;
 
-	readIP("Source IP\t");
-	readIP("Destination IP\t");
+	skip(1);
+
+	uint16_t psz; next((uint8_t *)&psz, sizeof(psz)); psz = ntohs(psz);
+
+	skip(8);
+	
+	readIP("\x1b[32mSource IP\x1b[0m\t");
+	readIP("\x1b[32mDestination IP\x1b[0m\t");
 
 	uint16_t p1; next((uint8_t *)&p1, sizeof(p1)); p1 = ntohs(p1);
 	uint16_t p2; next((uint8_t *)&p2, sizeof(p2)); p2 = ntohs(p2);
 
-	printf("Source port\t: %5d\n", p1);
-	printf("Destin port\t: %5d\n", p2);
+	if (ipsz > 4) skip((ipsz << 2) - 20);
 
+	printf("\x1b[32mSource port\x1b[0m\t: %5d\n", p1);
+	printf("\x1b[32mDestin port\x1b[0m\t: %5d\n", p2);
+
+	skip(8);
+
+	uint8_t sz; next(&sz, sizeof(sz)); sz >>= 4;
+
+	skip(7);
+
+	if (sz > 4) skip((sz << 2) - 20);
+
+
+	uint16_t tsz = psz - ipsz - sz;
+	if (tsz > 16) tsz = 16;
+
+	printf("\x1b[34mPAYLOAD\x1b[0m(%2d BYTES)\n", tsz);
+
+	for (uint16_t i = 0 ; i < tsz ; i++) {
+		if (i) printf(" ");
+		uint8_t buf; next(&buf, sizeof(buf));
+		printf("%02X", buf);
+	}
+	printf("\n");
    }
 
    pcap_close(handle);
