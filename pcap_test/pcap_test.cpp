@@ -81,10 +81,16 @@ int main(int argc, char *argv[]) {
 
 	uint16_t psz; next((uint8_t *)&psz, sizeof(psz)); psz = ntohs(psz);
 
-	skip(8);
+	skip(5);
+
+	uint8_t prt; next(&prt, sizeof(prt));
+
+	skip(2);
 	
 	readIP("\x1b[32mSource IP\x1b[0m\t");
 	readIP("\x1b[32mDestination IP\x1b[0m\t");
+
+	if (prt != 0x06) continue;
 
 	uint16_t p1; next((uint8_t *)&p1, sizeof(p1)); p1 = ntohs(p1);
 	uint16_t p2; next((uint8_t *)&p2, sizeof(p2)); p2 = ntohs(p2);
