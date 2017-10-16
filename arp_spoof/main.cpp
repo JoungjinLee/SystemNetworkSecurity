@@ -1,4 +1,5 @@
 #include "arp_spoof.h"
+#include <signal.h>
 
 char *dev;
 char errbuf[1000];
@@ -8,8 +9,14 @@ struct spoofTarget *spoofList;
 struct Address attacker;
 int slen;
 
+static volatile int isStop = 0;
+
+void interL(int d) {
+	isStop = 1;
+}
+
 void preserve() {
-	while(1) {
+	while(!isStop) {
 		for (int i = 0 ; i < slen ; i++) {
 			sendARP(handle, spoofList + i, &attacker);
 		}
@@ -38,9 +45,6 @@ int main(int argc, char *argv[]) {
 		getHWaddr(handle, &(spoofList[i].target), &attacker);
 	}
 
-	getMacAddr(&attacker, dev);
-	getIpAddr(&attacker, dev);
-
 	printf("Attacker Information\n");
 	printf("  IP Address\t: "); printIp(&attacker); printf("\n");
 	printf("  MAC Address\t: "); printMac(&attacker); printf("\n");
@@ -52,11 +56,13 @@ int main(int argc, char *argv[]) {
 	}
 
 	std::thread pr (preserve);
-	
+	signal(SIGINT, interL);
+
+	printf("Enter Ctrl-C to interrupt program.\n");
 	
 	const u_char *pkt;
 	struct pcap_pkthdr *hdr;
-	while(1) {
+	while(!isStop) {
 		if(!load(handle, &hdr, &pkt)) break;
 		if (isARP(pkt)) {
 			for (int i = 0 ; i < slen ; i++) {
@@ -79,7 +85,10 @@ int main(int argc, char *argv[]) {
 		}
 	}
 
-	printf("Interface closed.\n");
+	printf("\n\nInterrupt Detected.\n");
+	for (int i = 0 ; i < slen ; i++) {
+		sendARP(handle, spoofList + i, &(spoofList[i].target));
+	}
 	free(spoofList);	
 }
 
