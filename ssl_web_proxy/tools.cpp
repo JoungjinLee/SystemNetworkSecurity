@@ -164,6 +164,21 @@ int readn(int s, char *buf, int len) {
 	return 0;
 }
 
+int readssl(SSL *ssl, char *buf, int len) {
+	int pos = 0;
+	int t = len;
+	while(len) {
+		int readed = SSL_read(ssl, buf + pos, std::min(len, 100));
+		if (readed > 0) {
+			len -= readed;
+			pos += readed;
+		} else if (readed == 0) {
+			return -1;
+		}
+	}
+	return 0;
+}
+
 void print(const char *buf, int len) {
 	for (int i = 0 ; i < len ; i++) {
 		char t = buf[i];

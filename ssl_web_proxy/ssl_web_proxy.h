@@ -18,6 +18,7 @@ SSL_CTX *load_server_context(const char *);
 SSL_CTX *load_client_context();
 
 int readn(int, const char *, int);
+int readssl(SSL *, char *, int);
 void print(const char *, int);
 
 

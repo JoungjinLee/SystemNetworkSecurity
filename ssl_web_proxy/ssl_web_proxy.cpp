@@ -19,7 +19,7 @@ void *sock_client(void *data) {
 
 	printf("ESTABLISHED :: %d connections\n", concnt);
 	int client = *(int *)data;
-	char buffer[2000];
+	char buffer[2017];
 	char host[200];
 	int idx = 0;
 	while(1) {
@@ -90,29 +90,95 @@ void *sock_client(void *data) {
 		if (cl) break;
 		printf("\n\nSERVER SENT\n");
 
-		int st = 0;
+		int totlen = 0;
 
-		int datlen = SSL_read(sssl, buffer, 2000);
-		if (datlen <= 0) break;
-		SSL_write(cssl, buffer, datlen);
-		print(buffer, datlen);
-		int totlen = -1;
 		while(1) {
-			if (*(uint16_t *)(buffer + st) == htons(0x0d0a)) break;
-			if (memcmp(buffer + st, "Content-Length: ", 16) == 0) {
-				totlen = atoi(buffer + st + 16);	
+			int i;
+			int isbing = 0;
+			if (memcmp(host, "api.bing.com", 12) == 0) {
+				printf("[[[BING DETECTED]]]\n");
+				isbing = 1;
 			}
-			while(*(uint16_t *)(buffer + st) != htons(0x0d0a)) st++;
-			st += 2;
+			if (isbing) {
+				for (i = 0 ; i < 200 ; i++) {
+					readssl(sssl, buffer, 1);
+					printf("%02X(", buffer[0]);
+					print(buffer, 1);
+					printf(")|");
+				}
+			}
+
+			for (i = 0 ; *(uint16_t*)(buffer + i - 2) != htons(0x0d0a) && i < 1900 ; i++) {
+				if (readssl(sssl, buffer + i, 1) < 0) {
+					cl = 1;
+					break;
+				}
+			}
+
+			if (cl) break;
+
+			SSL_write(cssl, buffer, i);
+			print(buffer, i);
+
+			if (memcmp(buffer, "\r\n", 2) == 0) {
+				break;
+			}
+			if (memcmp(buffer, "Content-Length: ", 16) == 0) {
+				totlen = atoi(buffer + 16);
+			}
+
+			if (memcmp(buffer, "Transfer-Encoding: chunked", 26) == 0) {
+				totlen = -1;
+			}
 		}
 
-		int remain = totlen - (datlen - st - 2);
-		while(remain > 0) {
-			int read = SSL_read(sssl, buffer, std::min(remain, 2000));
-			if (read <= 0) {cl = 1; break;}
-			SSL_write(cssl, buffer, read);
-			print(buffer, read);
-			remain -= read;
+		if (totlen < 0) {
+			while(1) {
+				int i;
+				for (i = 0 ; *(uint16_t *)(buffer + i - 2) != htons(0x0d0a) ; i++) {
+					if (readssl(sssl, buffer + i, 1) < 0) {
+						cl = 1;
+						break;
+					}
+				}
+
+
+				if (cl) break;
+
+				SSL_write(cssl, buffer, i);
+				print(buffer, i);
+
+				int len = strtol(buffer, NULL, 16);
+				if (len <= 0) {
+					if (readssl(sssl, buffer, 2) < 0) {cl = 1;}
+					if (cl) break;
+					SSL_write(sssl, buffer, 2);
+					print(buffer, 2);
+					break;
+				}
+
+				while(len > 0) {
+					int read = SSL_read(sssl, buffer, std::min(len, 2000));
+					if (read <= 0) {cl = 1; break;}
+					SSL_write(cssl, buffer, read);
+					print(buffer, read);
+					len -= read;
+				}
+
+				if (readssl(sssl, buffer, 2) < 0) {cl = 1; break;}
+				if (cl) break;
+				SSL_write(sssl, buffer, 2);
+				print(buffer, 2);
+
+			}
+		} else {
+			while(totlen > 0) {
+				int read = SSL_read(sssl, buffer, std::min(totlen, 2000));
+				if (read <= 0) {cl = 1; break;}
+				SSL_write(cssl, buffer, read);
+				print(buffer, read);
+				totlen -= read;
+			}
 		}
 		if (cl) break;
 	}
